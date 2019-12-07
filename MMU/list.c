@@ -106,27 +106,53 @@ void list_add_ascending_by_address(list_t *l, block_t *newblk){
    *    node_t *c = l.head;
    *    Insert newblk After Current Node if:   newblk->start > c->start
    */
+node_t *c = l->head, *old_next;
+	if (c == NULL) // empty list
+		l->head = newblk;
+	else if (c->next == NULL) { // one node only
+        if (newblk->start > c->start)
+		    c->next = newblk;
+		else {
+		    l->head = newblk;
+		    newblk->next = c;
+		}
+    } else {
+		while (c->next) {
+			if (newblk->start > c->start){
+				old_next = c->next;
+				c->next = newblk;
+				return;
+			}
+			c = c->next;
+		}
 }
 
 void list_add_ascending_by_blocksize(list_t *l, block_t *newblk){
    /*
    * 1. Insert newblk into list l in ascending order based on the blocksize.
-   *    blocksize is calculated :  blocksize = end - start +1
+   *    blocksize is calculated :  blocksize = end - start
    * 
    *    Ex:  blocksize = newblk->end - newblk->start
    * 
    *         node_t *c = l.head;
    * 
-   *         curr_blocksize = c->blk->end - c->blk->start +1;
+   *         curr_blocksize = c->blk->end - c->blk->start + 1;
    * 
    *         Insert newblk After Current Node if:   blocksize >= curr_blocksize
    * 
    *    USE the compareSize()
    */
+  
+  int blocksize = newblk->end - newblk->start;
+  node_t *c = l.head;
+  int curr_blocksize = c->blk->end - c->blk->start +1;
+  if (compareSize(curr_blocksize, newblk)){
+    c->next = newblk;
+  }
 }
 
 void list_add_descending_by_blocksize(list_t *l, block_t *blk){
-  node_t *current;
+   node_t *current;
   node_t *prev;
   node_t *newNode = node_alloc(blk);
   int newblk_size = blk->end - blk->start;
@@ -163,7 +189,7 @@ void list_add_descending_by_blocksize(list_t *l, block_t *blk){
                current = current->next;
                
                if(current != NULL)  // the last one in the list
-                     curblk_size = current->blk->end - current->blk->start;
+                     curblk_size = current->blk->end - current->blk->start + 1;
           }
           prev->next = newNode;
           newNode->next = current;
@@ -187,6 +213,19 @@ void list_coalese_nodes(list_t *l){
    * 
    * USE the compareSize()
    */
+  node_t_t *prev;
+  node_t *current = l->head;
+  while(current != NULL){
+    if ((prev->end + 1) == (current->start))
+      prev->end = current->end;
+    else { // #6
+        prev = current;
+        current = current -> next;
+        continue; // go back to #2
+    }
+    prev->next = current->next;
+    free(current);
+  }
 }
 
 block_t* list_remove_from_back(list_t *l){
@@ -285,7 +324,7 @@ bool compareBlks(block_t* a, block_t *b) {
 
 bool compareSize(int a, block_t *b) {  // greater or equal
   
-  if(a <= (b->end - b->start) + 1)
+  if(a >= (b->end - b->start) + 1)
      return true;
   
   return false;
@@ -372,7 +411,15 @@ bool list_is_in_by_pid(list_t *l, int pid){
    * 
    * USE the comparePID()
    * 
-   * Look at list_is_in_by_size()
+   * Look at list_is_in_by_size() */
+  node_t *current = l->head;
+  while(current != NULL){
+    if(comparePID(pid, current->blk)){
+      return true;
+    }
+    current = current->next;
+  }
+return false;
 }
 
 /* Returns the index at which the given block of Size or greater appears. */
