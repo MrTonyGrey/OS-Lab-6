@@ -42,15 +42,7 @@ void get_input(char *args[], int input[][2], int *n, int *size, int *policy)
 
 void allocate_memory(list_t * freelist, list_t * alloclist, int pid, int blocksize, int policy) {
   
-    /* if policy == 1 -> FIFO
-     *              2 -> BESTFIT 
-     *              3 -> WORSTFIT
-     * 
-     * blocksize - size of the block to allocate_memory
-     * pid - process the block belongs to
-     * alloclist - list of allocated memory blocksize
-     * freelist - list of free memory blocks
-     * 
+    /*
     * 1. Check if a node is in the FREE_LIST with a blk(end - start) >= blocksize
     * 2. if so, remove it and go to #3, if not print ""Error: Memory Allocation <blocksize> blocks\n""
     * 3. set the blk.pid = pid
@@ -63,23 +55,78 @@ void allocate_memory(list_t * freelist, list_t * alloclist, int pid, int blocksi
     *     d. set the fragment->end = original blk.end before you changed it in #4
     *     e. add the fragment to the FREE_LIST based on policy
     */
+  
+  if (list_is_in_by_size(freelist, blocksize)){
+    //2
+    block_t* blk = list_remove_from_front(freelist);
+  }
+  else{
+    printf("Error: Memory Allocation %d blocks\n", blocksize);
+    return;
+  }
+  //3
+  blk.pid = pid;
+  //4
+  int original_blk_end = blk.end;
+  blk.end = blk->start + blocksize - 1; // resizing block to correct size
+  //5
+  list_add_ascending_by_address(alloclist, blk);
+  
+  if (original_blk_end - blk.start < blocksize) { // check if we have fragmentation
+  //6a
+  block_t* fragment = (block_t*)malloc(sizeof(block_t));
+  //6b
+  fragment->pid = 0;
+  //6c
+  fragment->start = blk.end + 1;
+  //6d
+  fragment->end = original_blk_end + 1;
+  //6e
+  switch (policy) {
+      case 1: //FIFO
+      list_add_to_back(freelist, fragment);
+      break;
+      case 2: //BESTFIT
+      list_add_ascending_by_blocksize(freelist, fragment);
+      break;
+      case 3: // WORSTFIT
+      list_add_descending_by_blocksize(freelist, fragment);
+      break;
+  }
+  }
+  
+
 }
 
 void deallocate_memory(list_t * alloclist, list_t * freelist, int pid, int policy) { 
-     /* if policy == 1 -> FIFO
-     *              2 -> BESTFIT 
-     *              3 -> WORSTFIT
-     * 
-     * pid - process id of the block to deallocate 
-     * alloclist - list of allocated memory blocksize
-     * freelist - list of free memory blocks
-     * 
-     * 
+   /*
     * 1. Check if a node is in the ALLOC_LIST with a blk.pid = pid
     * 2. if so, remove it and go to #3, if not print "Error: Can't locate Memory Used by PID: <pid>"
     * 3. set the blk.pid back to 0
     * 4. add the blk back to the FREE_LIST based on policy.
     */
+  
+  	if (list_is_in_by_pid(alloclist, pid)) // 1
+		//2
+		block_t* blk = list_remove_at_index(alloclist, list_get_index_of_by_Pid(alloclist, pid));
+	else {
+		printf("Error: Can't locate Memory Used by PID: %d\n", pid);
+		return;
+	}
+	//3
+	blk.pid = 0;
+	//4
+	switch (policy) {
+		case 1: //FIFO
+			list_add_to_back(freelist, blk);
+			break;
+		case 2: //BESTFIT
+			list_add_ascending_by_blocksize(freelist, blk);
+			break;
+		case 3: // WORSTFIT
+			list_add_descending_by_blocksize(freelist, blk);
+			break;
+	}
 }
 
 list_t* coalese_memory(list_t * list){
